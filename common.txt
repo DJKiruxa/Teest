@@ -1,0 +1,1019 @@
+// json请求封装类 
+var jsonrpc = function () {
+    this.jsonrpc = '2.0';
+    this.method = 'webrpc';
+    this.id = 1;
+    this.params = {};
+}
+
+jsonrpc.prototype = {
+    setvalue: function (pname, pvalue) {
+        this.params[pname] = pvalue;
+    },
+
+    setparams: function (pvalue) {
+        this.params = pvalue;
+    },
+
+    jsonstr: function () {
+        return JSON.stringify(this);
+    }
+};
+
+
+function writeObj(obj) {
+    var description = "";
+    for (var i in obj) {
+        var property = obj[i];
+        description += i + " = " + property + "\n";
+    }
+    alert(description);
+};
+
+var templateObj = function () {
+    this.AreaLevel = '';
+    this.Catalog = '';
+    this.ChidrenId = new Array();
+    this.ClassName = '';
+    this.DomainName = '';
+    this.FunctionType = '';
+    this.Id = '';
+    this.IsPart = 'false';
+    this.Metes = new Array();
+    this.Name = '';
+    this.Properties = new Array();
+    this.Type = '';
+}
+var StationType =[
+    {name:"全部",id:0},
+    {name:"一级局站",id:1},
+    {name:"二级局站",id:2},
+    {name:"三级局站",id:3},
+    {name:"四级局站",id:4}];
+var AlarmLeavel = [
+    { name: "全部", id: 0 },
+    { name: "一级告警", id: 1 },
+    { name: "二级告警", id: 2 },
+    { name: "三级告警", id: 3 },
+    { name: "四级告警", id: 4 }];
+/**
+ * 区域Catalog名称定义
+ * */
+// var AreaDef = {
+//     区县: "区县",
+//     国家: "国家",
+//     基站: "基站",
+//     市: "市",
+//     机房: "机房",
+//     省: "省",
+// };
+var AreaDef = {
+    "区县": "区县",
+    "国家": "国家",
+    "基站": "基站",
+    "市": "市",
+    "机房": "机房",
+    "省": "省",
+};
+
+/**
+ * 量名称定义
+ * */
+// var MeteNameDef = {
+//     街道: "街道",
+//     经度: "经度",
+//     纬度: "纬度",
+//     行业Id: "行业Id",
+// };
+var MeteNameDef = {
+    "街道": "街道",
+    "经度": "经度",
+    "纬度": "纬度",
+    "行业Id": "行业Id",
+};
+
+
+var catlogStationPrefix = "Station";
+var catlogStationCountry = "StationCountry";
+var catlogSationProvince = "StationProvince";
+var catlogStationCity = "StationCity";
+var catlogSationDistrict = "StationDistrict";
+var catlogNode = "基站";
+var catlogGateway = "Gateway";
+var catlogIPC = "IPC";
+var catlogNVR = "NVR";
+var catlogDome = "Dome";
+var catlogModule = "Module";
+var catlogSensor = "Sensor";
+var catlogServer = "Server";
+var catlogSmart = "Smart";
+
+
+//devObj->objType
+var AREA_TYPE = 0;
+var SMART_DEV_TYPE = 1;
+var GATEWAY_TYPE = 2;
+var SERVER_TYPE = 3;
+var SENSOR_TYPE = 4;
+var ORGANIZATION_TYPE = 5;
+var MODULE_TYPE = 6;
+
+
+var getDevObjTypeName = function (objTypeId) {
+    switch (objTypeId) {
+        case 0:
+            return "区域";
+            break;
+        case 1:
+            return "智能设备";
+            break;
+        case 2:
+            return "网关";
+            break;
+        case 3:
+            return "服务器";
+            break;
+        case 4:
+            return "传感器";
+            break;
+        case 5:
+            return "ORGANIZATION";
+            break;
+        case 6:
+            return "模块";
+            break;
+    }
+}
+
+var devObj = function () {
+    this.parentid = 0;
+    this.parent = null;
+    this.name = '';
+    this.objId = '';
+    this.templateId = '';
+    this.objState = 0;
+    this.objType = 0;
+    this.parentConnection = '';
+    this.catalog = '';
+    this.summary = '';
+    this.summaryAddition = '';
+    this.img = '';
+    this.classes = 'devListView';
+    this.isVideo = false;
+    this.cfgMeteValues = Array();
+}
+
+var meteObj = function () {
+    this.objId = 0;
+    this.devName = '';
+    this.Name = '';
+    this.Id = 0;
+    this.Value = 0;
+    this.token = '';
+    this.gatewayId = 0;
+    this.transType = 0;
+    this.meteType = 0;
+    this.dataType = 0;
+    this.SourceMeteId = 0;
+}
+
+var jsMetes = function () {
+    this.Id = '';
+    this.TemplateId = '';
+    metes = new Array();
+}
+
+var jsMete = function () {
+    this.Id = '';
+    this.TemplateId = '';
+    this.Value = '';
+    this.report = '';
+    this.signalNo = 0;
+    this.validate = 0;
+}
+
+var paramKeyValue = function () {
+    this.name = '';
+    this.value = '';
+}
+
+
+var ptzCtrlParam = function () {
+    this.ctrType = -1;
+    this.aliasMeteName = '';
+    this.gatewayId = 0;
+    this.objId = 0;
+    this.userId = 1;
+    this.userName = '';
+    this.meteId = '';
+    this.cmdName = '';
+    this.action = ''; //begin; stop
+    this.params = new Array();
+    this.token = '';
+}
+
+var streamInfo = function () {
+    this.objId = 0;
+    this.streamType = 0;
+    this.meteId = 0;
+    this.aliasMeteName = '';
+    this.token = '';
+}
+
+
+devObj.prototype = {}
+
+var summaryNodeValue = function () {
+    this.name = '';
+    this.value = '';
+}
+
+
+var treeNode = function () {
+    this.children = new Array();
+    this.value = null;
+}
+var templateNode = function () {
+    this.chilren = new Array();
+    this.value = null;
+}
+
+var presetInfo = function () {
+    this.seq = 0;
+    this.name = '';
+}
+
+
+var devCtrlParam = function(){
+    this.objId = 0;
+    this.meteId = 0;
+    this.value = 0;
+}
+
+function insertNode(node, tree) {
+    // alert("node id:"+node.objId +" tree objid:"+ tree.value.objId+" parentid:"+node.parentid);
+    if (node.parentid == tree.value.objId) {
+        // alert("inset Array:"+node.objId);
+        for (var i = 0; i < tree.children.length; i++) {
+            if (tree.children[i].value.objId == node.objId) {
+                if (this.parentConnection != "") {
+                    tree.children[i].value = node;
+                    tree.children[i].value.parent = tree.value;
+                }
+                return 0;
+            }
+        }
+        var nodeValue = new treeNode();
+        nodeValue.value = node;
+        nodeValue.value.parent = tree.value;
+        tree.children[tree.children.length] = nodeValue;
+        return 0;
+    }
+    else {
+        //alert("insert to children:"+tree.children.length);
+        for (var i = 0; i < tree.children.length; i++) {
+            if (0 == insertNode(node, tree.children[i])) {
+                //      alert("insert success");
+                return 0;
+            }
+        }
+    }
+    return -1;
+
+}
+
+
+function insertByConnection(node, tree, connstr) {
+    //alert("insert byconn:"+connstr);
+    var level = connstr.split(".");
+    //writeObj(level);
+    var parentid = 0;
+    for (var i = 0; i < level.length - 1; i++) {
+        var typeId = level[i].split("_");
+        //writeObj(typeId);
+        var newNode = new devObj();
+        newNode.parentid = parentid;
+        newNode.objId = typeId[typeId.length - 1];
+        if (getChildNode(newNode.objId, tree) == null) {
+            insertNode(newNode, tree);
+        }
+        //alert("p:"+newNode.parentid+" o:"+newNode.objid);        
+        parentid = newNode.objId;
+    }
+    insertNode(node, tree);
+}
+
+function getChildNode(objId, tree) {
+    //alert("get child objid:"+objId+" tree:"+tree.value.objId+" length:"+tree.children.length);
+    if (tree.value.objId == objId) {
+        //alert("get node"+tree.children.length);
+        return tree;
+    }
+    for (var i = 0; i < tree.children.length; i++) {
+        var node = getChildNode(objId, tree.children[i]);
+        if (node != null) {
+            //alert("get node 1  "+node.children.length);
+            return node;
+        }
+    }
+    return null;
+}
+
+function addSummaryNodeValue(sumarryArry, name, value) {
+    var node = new summaryNodeValue();
+    node.name = name;
+    node.value = value;
+    sumarryArry.push(node);
+}
+
+
+function getAreaSummary(childCoun, sumaryJson) {
+    var summary = new Array();
+    addSummaryNodeValue(summary, "子设备信息:", "局站数量 " + childCoun);
+    addSummaryNodeValue(summary, "告警信息:", "未消除告警数 " + sumaryJson["alarmNotCleared"]);
+    return summary;
+}
+
+function getNodeSummary(childCoun, summaryJson) {
+    var summary = new Array();
+    var street = '', pos = '';
+    var tem = '0', hum = '0';
+    var addition = summaryJson["addition"];
+    if (addition != null) {
+        for (var i = 0; i < addition.length; i++) {
+            if (addition[i].meteId == "1006") {
+                //addSummaryNodeValue(summary, "面积", addition[i].value);
+            }
+            if (addition[i].meteId == "12001") {
+                street = addition[i].value;
+                addSummaryNodeValue(summary, "基站位置信息:", "街道 " + street);
+                // addSummaryNodeValue(summary, "街道", addition[i].value);
+            }
+            if (addition[i].meteId == "12002") {
+                pos = addition[i].value;
+                //addSummaryNodeValue(summary, "经纬度", addition[i].value);
+            }
+            if (addition[i].meteId == "118101001") {
+                tem = addition[i].value;
+            }
+            if (addition[i].meteId == "118102001") {
+                hum = addition[i].value;
+            }
+        }
+    }
+
+    addSummaryNodeValue(summary, "子设备信息:", "FSU数量 " + childCoun + ",离线设备 " + summaryJson["offLineCount"]);
+    addSummaryNodeValue(summary, "告警信息:", "未消除告警数 " + summaryJson["alarmNotCleared"]);
+
+    addSummaryNodeValue(summary, "基站环境信息:", "温度 " + tem + ",湿度 " + hum);
+    return summary;
+}
+
+
+function getFsuSummary(childCoun, summaryJson) {
+    var summary = new Array();
+    var onlineTm = '', offlineTm = '';
+    if (summaryJson["onLineTime"] != null) {
+        onlineTm = summaryJson["onLineTime"];
+        //addSummaryNodeValue(summary, "上线时间", summaryJson["onLineTime"]);
+    }
+    if (summaryJson["offLineTime"] != null) {
+        offlineTm = summaryJson["offLineTime"];
+        //addSummaryNodeValue(summary, "离线时间", summaryJson["offLineTime"]); 
+    }
+    //addSummaryNodeValue(summary, "监控量个数", summaryJson["monitorMeteCount"]);
+    addSummaryNodeValue(summary, "告警信息:", "未消除告警数 " + summaryJson["alarmNotCleared"]);
+    var stsInfo = "在线状态 " + summaryJson["curState"];
+    if (summaryJson["curState"] == "在线") {
+        stsInfo += ",上线时间 " + onlineTm;
+    }
+    else {
+        stsInfo += ",离线时间 " + offlineTm;
+    }
+    addSummaryNodeValue(summary, "设备状态:", stsInfo);
+    return summary;
+}
+
+function getAreaNodeSummary(childCoun, summaryJson) {
+    var summary = new Array();
+    addSummaryNodeValue(summary, "子设备信息:", "基站数量" + childCoun);
+    addSummaryNodeValue(summary, "未消除告警数", summaryJson["alarmNotCleared"]);
+    return summary;
+}
+
+function getAreaFsuSummary(childCoun, sumaryJson) {
+    var summary = new Array();
+    addSummaryNodeValue(summary, "FSU数量", childCoun);
+    addSummaryNodeValue(summary, "告警信息:", "未消除告警数" + sumaryJson["alarmNotCleared"]);
+    return summary;
+}
+
+
+//0:area-area  1:area-node 2:area-fsu 3:node 4:fsu
+function getSummaryStr(childCoun, type, summaryJson) {
+    switch (type) {
+        case 0:
+            return getAreaSummary(childCoun, summaryJson);
+        case 1:
+            return getAreaNodeSummary(childCoun, summaryJson);
+        case 2:
+            return getAreaFsuSummary(childCoun, summaryJson);
+        case 3:
+            return getNodeSummary(childCoun, summaryJson);
+        case 4:
+            return getFsuSummary(childCoun, summaryJson);
+        case 5:
+            break;
+    }
+}
+
+function getStationType(node) {
+    //alert("get station type");
+
+    var catlog = node.value.catalog;
+    var type = 0; //0:area-area  1:area-node 2:area-fsu 3:node 4:fsu
+    if (node.value.objType == AREA_TYPE) {
+        if (node.children.length > 0) {
+            var subNode = node.children[0];
+            if (subNode.value.objType == AREA_TYPE) {
+                if (subNode.value.catalog == "机房"
+                    || subNode.value.catalog == "基站") {
+                    type = 1;
+                }
+            }
+            else {
+                type = 2;
+            }
+        }
+    }
+    else if (catlog == "机房"
+        || catlog == "基站") {
+        type = 3;
+    }
+    else if (node.value.objType == GATEWAY_TYPE) {
+        type = 4;
+    }
+    else {
+        type = 5;
+    }
+    return type;
+}
+
+var HeaderParamsParser = function () {
+    this.headerValue = '',
+        this.headerParams = ''
+}
+
+HeaderParamsParser.prototype = {
+    init: function (headerValue) {
+        this.headerValue = headerValue;
+        this.headerParams = this.headerValue.split(",");
+    },
+    getParam: function (paramName) {
+        var paramVal = null;
+        $.each(this.headerParams, function (index, value) {
+            if (value.indexOf(paramName) >= 0) {
+                paramVal = value.split(paramName + "=")[1];
+                paramVal = paramVal.substring(1, paramVal.length - 1);
+            }
+        });
+        return paramVal;
+    },
+    calculateResponse: function (method, uri, nonce, realm, qop) {
+        var a2 = method + ":" + uri;
+        var a2Md5 = hex_md5(a2);
+        var a1Md5 = hex_md5(serverInfoService.username + ":" + realm + ":" + (serverInfoService.password));
+        var digest = a1Md5 + ":" + nonce + ":" + "00000001" + ":" + "cnonce" + ":" + qop + ":" + a2Md5;
+        return hex_md5(digest);
+    },
+    generateAuthorizationHeader: function (wwwAuthenticationHeader, response, uri) {
+        return wwwAuthenticationHeader + ', username="' + serverInfoService.username + '", uri="' +
+            uri + '", response="' + response + '", nc=' +
+            "00000001" + ', cnonce="' + "cnonce" + '"';
+    }
+}
+
+function isTranspatrenMode(){
+   return $.cookie("transparentMode");
+}
+
+var httpInvoke = function (url, type, data, successCb, failedCb, userData, async) {
+	
+	//console.log("httpInvoke url:",url);
+	var __url = url;
+	var transFsuId = isTranspatrenMode();
+	if ((transFsuId != undefined) && (transFsuId != "false"))
+	{
+		var transUrl = "/jscmd/transparent/" + transFsuId + "/";
+		transUrl = transUrl.replace(/:/g, "_");
+		__url = __url.replace("/jscmd/", transUrl);
+	}
+	
+    return $.ajax({
+        url: __url,
+        type: type,
+        data: data,
+        async: async,
+        times: 0,
+        beforeSend: function (request) {
+            request.setRequestHeader("Mobile", "true");
+        },
+        success: function (response, status, hreq) {
+            if (hreq.status == 304) {
+                if (this.times == 0) {
+                    this.times = 1;
+                    var paramParser = new HeaderParamsParser();
+                    var headers = hreq.getAllResponseHeaders();
+                    paramParser.init(hreq.getResponseHeader("Pragma"));
+                    var nonce = paramParser.getParam("nonce");
+                    var realm = paramParser.getParam("realm");
+                    var qop = paramParser.getParam("qop");
+                    var urlEncode = encodeURIComponent(url);
+                    var response = paramParser.calculateResponse(this.type, urlEncode, nonce, realm, qop);
+                    var authorizationHeaderValue = paramParser.generateAuthorizationHeader(paramParser.headerValue, response, urlEncode);
+                    return $.ajax({
+                        url: this.url,
+                        type: this.type,
+                        data: this.data,
+                        async: this.async,
+                        beforeSend: function (request) {
+                            request.setRequestHeader("Mobile", authorizationHeaderValue);
+                        },
+                        success: this.success,
+                        error: this.error
+                    });
+                }
+                else {
+                    if (failedCb != null) {
+                        failedCb(hreq.status, userData);
+                    }
+                }
+
+            }
+            else if (successCb != null) {
+                successCb(response, status, userData);
+            }
+        },
+        error: function (err) {
+            if (failedCb != null) {
+                failedCb(err.statusCode(), userData);
+            }
+        }
+
+    })
+}
+
+var httpPost = function (url, data, successCb, failedCb, userData) {
+    return httpInvoke(url, "POST", data, successCb, failedCb, userData, true);
+}
+var httpPostSyn = function (url, data, successCb, failedCb, userData) {
+    return httpInvoke(url, "POST", data, successCb, failedCb, userData, false);
+}
+
+var httpGet = function (url, successCb, failedCb, userData) {
+    return httpInvoke(url, "GET", null, successCb, failedCb, userData, true);
+}
+
+
+var httpPut = function (url, data, successCb, failedCb, userData) {
+    return httpInvoke(url, "PUT", data, successCb, failedCb, userData, true);
+}
+var httpPutSyn = function (url, data, successCb, failedCb, userData) {
+    return httpInvoke(url, "PUT", data, successCb, failedCb, userData, false);
+}
+
+var httpGetSyn = function (url, successCb, failedCb, userData) {
+    return httpInvoke(url, "GET", null, successCb, failedCb, userData, false);
+}
+
+var httpDelete = function (url, successCb, failedCb, userData) {
+    return httpInvoke(url, "DELETE", null, successCb, failedCb, userData, true);
+}
+var httpDeleteSyn = function (url, successCb, failedCb, userData) {
+    return httpInvoke(url, "DELETE", null, successCb, failedCb, userData, false);
+}
+
+var httpDelete = function (url, data,successCb, failedCb, userData) {
+    return httpInvoke(url, "DELETE", data, successCb, failedCb, userData, true);
+}
+var httpDeleteSyn = function (url, data, successCb, failedCb, userData) {
+    return httpInvoke(url, "DELETE", data, successCb, failedCb, userData, false);
+}
+function drawChart(container, option) {
+    var myChart = echarts.init(container);
+    myChart.setOption(option, true);
+}
+
+function GetRequestParams(params) {
+    var theRequest = new Object();
+    strs = params.split("&");
+    for (var i = 0; i < strs.length; i++) {
+        theRequest[strs[i].split("=")[0]] = unescape(strs[i].split("=")[1]);
+    }
+
+    return theRequest;
+}
+
+
+function IsPC() {
+    var userAgentInfo = navigator.userAgent;
+    var Agents = ["Android", "iPhone",
+                "SymbianOS", "Windows Phone",
+                "iPad", "iPod"];
+    var flag = true;
+    for (var v = 0; v < Agents.length; v++) {
+        if (userAgentInfo.indexOf(Agents[v]) > 0) {
+            flag = false;
+            break;
+        }
+    }
+    return flag;
+}
+
+
+function requestFullScreen(element) {
+    // 判断各种浏览器，找到正确的方法
+    var requestMethod = element.requestFullScreen || //W3C
+    element.webkitRequestFullScreen ||    //Chrome等
+    element.mozRequestFullScreen || //FireFox
+    element.msRequestFullScreen; //IE11
+    if (requestMethod) {
+        requestMethod.call(element);
+    }
+    else if (typeof window.ActiveXObject !== "undefined") {//for Internet Explorer
+        var wscript = new ActiveXObject("WScript.Shell");
+        if (wscript !== null) {
+            wscript.SendKeys("{F11}");
+        }
+    }
+}
+
+//退出全屏 判断浏览器种类
+function exitFull() {
+    // 判断各种浏览器，找到正确的方法
+    var exitMethod = document.exitFullscreen || //W3C
+    document.mozCancelFullScreen ||    //Chrome等
+    document.webkitExitFullscreen || //FireFox
+    document.webkitExitFullscreen; //IE11
+    if (exitMethod) {
+        exitMethod.call(document);
+    }
+    else if (typeof window.ActiveXObject !== "undefined") {//for Internet Explorer
+        var wscript = new ActiveXObject("WScript.Shell");
+        if (wscript !== null) {
+            wscript.SendKeys("{F11}");
+        }
+    }
+}
+function FullScreenClick() {
+    requestFullScreen(document.getElementById('mainHtml'));
+    $("#fullScreenLi").hide();
+    $("#exitFullScreenLi").show();
+
+}
+function ExitFullScreenClick() {
+    exitFull();
+    $("#fullScreenLi").show();
+    $("#exitFullScreenLi").hide();
+}
+function WinHeight() {
+    return $(window).height();
+	
+}
+
+function cookieEnable() {
+    $.cookie("msjCookieEnable", "true");
+    if ($.cookie("msjCookieEnable") == "true") {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+
+function genDevTree(devs){
+    var devtree = $("#leftTree");
+    $.each(devs,function(index,item) {
+    var text = "<li><span data-devid=\""+ item.devId +"\" data-objType=\""+item.devType +"\">" + item.templateName+'(' + item.devId + ')' + "</span></li>";
+    devtree.append(text);
+});
+}
+
+
+function GetQueryString(name)
+{
+     var reg = new RegExp("(^|&)"+ name +"=([^&]*)(&|$)");
+     var r = window.location.search.substr(1).match(reg);
+     if(r!=null)return  unescape(r[2]); return null;
+}
+
+var $table = null;
+var rowCount = 0;
+var tableContainer = null;
+function onPageNumChange(param){
+            rePageTable($(param).val());
+         }
+function rePageTable(pageNum){
+    console.log("start pages");
+    var count = $("a[name='pageTag']").length;
+     for(var i =0; i < count; i++)
+     {
+        $("a[name='pageTag']")[0].remove();
+     }
+     $("#pageSelectId").remove();
+     currentPage = 0;
+    var currentPage = 0;//当前页默认值为0  
+     var pageSize = pageNum;//每一页显示的数目  
+     $table.bind('paging',function(){  
+         $table.find('tbody tr').hide().slice(currentPage*pageSize,(currentPage+1)*pageSize).show();  
+     });      
+     if(rowCount == 0)
+     {
+        return;
+     } 
+     var sumRows =  rowCount;  
+     var sumPages = Math.ceil(sumRows/pageSize);//总页数  
+       
+     var $pager = $('<div class="page"></div>');  //新建div，放入a标签,显示底部分页码  
+     for(var pageIndex = 0 ; pageIndex<sumPages ; pageIndex++){  
+         $('<a href="#" id="pageStyle" name="pageTag" onclick="changCss(this)"><span>'+(pageIndex+1)+'</span></a>').bind("click",{"newPage":pageIndex},function(event){  
+             currentPage = event.data["newPage"];  
+             $table.trigger("paging");  
+               //触发分页函数  
+             }).appendTo($pager);  
+             $pager.append(" ");  
+         }  
+         
+         $pager.append("<select id='pageSelectId' onchange='onPageNumChange(this)'><option value='10'>10</option><option value='15'>15</option><option value='20'>20</option></select>");    
+         $pager.insertAfter($table);  
+         $table.trigger("paging");  
+         $("#pageSelectId").val(pageNum);  
+         //默认第一页的a标签效果  
+         var $pagess = $('#pageStyle');  
+         $pagess[0].style.backgroundColor="#006B00";  
+         $pagess[0].style.color="#ffffff"; 
+         
+        tableContainer.mCustomScrollbar("destroy");
+        tableContainer.mCustomScrollbar({
+                    update:{}
+                }); 
+}
+function tablePages(target, count, container){
+     $table = target;
+     tableContainer = container;
+     rowCount = count;
+     rePageTable(10);
+}
+
+function isipv4(value)
+{
+    return /^(25[0-5]|2[0-4]\d|[01]?\d\d?)\.(25[0-5]|2[0-4]\d|[01]?\d\d?)\.(25[0-5]|2[0-4]\d|[01]?\d\d?)\.(25[0-5]|2[0-4]\d|[01]?\d\d?)$/i.test(value);
+}
+
+// add a zero in front of numbers<10
+function fomrtNum(i){
+    if (i<10) 
+        {i="0" + i}
+    return i
+}
+
+
+Date.prototype.getDateStr = function(){
+    var y = this.getFullYear();
+    var m = this.getMonth()+1;
+    var d = this.getDate();
+    m = fomrtNum(m);
+    d = fomrtNum(d);
+    return y+"-"+m+"-"+d;
+}
+
+Date.prototype.getTimeStr = function(){
+    var h= this.getHours();
+    var m= this.getMinutes();
+    var s= this.getSeconds();
+    h = fomrtNum(h);
+    m = fomrtNum(m);
+    s = fomrtNum(s);
+    return h+":"+m+":"+s;
+}
+
+Date.prototype.getStr = function(){
+    return this.getDateStr() + " " + this.getTimeStr();
+}
+
+Date.prototype.format = function(str){
+    var reg = /^(\d+)-(\d{1,2})-(\d{1,2}) (\d{1,2}):(\d{1,2}):(\d{1,2})$/;   
+    var r = str.match(reg);
+    if(r!=null){
+        this.setFullYear(r[1]);
+        this.setMonth(r[2]-1);
+        this.setDate(r[3]);
+        this.setHours(r[4]);
+        this.setMinutes(r[5]);
+        this.setSeconds(r[6]);
+    }
+}
+
+function isInteger(value)
+{        
+  var str = value.trim();
+  return (str.length!=0) && /^[-+]?\d*$/.test(str);
+}
+
+function checkDateTime(str)  
+{   
+    var reg = /^(\d+)-(\d{1,2})-(\d{1,2}) (\d{1,2}):(\d{1,2}):(\d{1,2})$/;   
+    var r = str.match(reg);
+    if(r==null)return false;   
+    r[2]=r[2]-1;
+    var d= new Date(r[1],r[2],r[3],r[4],r[5],r[6]);   
+    if(d.getFullYear()!=r[1])return false;   
+    if(d.getMonth()!=r[2])return false;   
+    if(d.getDate()!=r[3])return false;   
+    if(d.getHours()!=r[4])return false;   
+    if(d.getMinutes()!=r[5])return false;   
+    if(d.getSeconds()!=r[6])return false;   
+    return true;   
+} 
+
+// 将一个DIV设置成百分比
+$.fn.setPercent = function(percent){
+    var pdiv = $(this).find('.percentinner');
+    if (pdiv[0]==undefined)
+    {
+        $(this).append('<div class="percentdiv"><div class="percentinner"></div></div><span/>');
+        $(this).find('.percentinner').height('100%');
+    }
+    var strperc = "" + percent + "%";
+    $(this).find('span').text("  " +strperc);
+    $(this).find('.percentinner').css('width',strperc);
+    var bgcolor = (percent>=90)?'#F77':'#6495ED';
+    $(this).find('.percentinner').css('background-color',bgcolor);
+};
+
+
+function showErrorTipsMessage(msg, domObj) {  
+    layer.tips(msg, domObj,{tips:[3,"red"]});//弹出框加回调函数  
+} 
+
+function msgTip(msg, closeFun){
+    layer.alert(msg, {
+        title: "Tips"
+        },function(){
+            if(closeFun != undefined && closeFun != null){
+                closeFun();
+				layer.closeAll();
+            }
+            else
+            {
+                layer.closeAll();
+            }            
+        });
+}
+function msgConfirm(msg, okFun){
+
+    layer.confirm(msg, {
+            btn: ['Confirm','Cancel'] //按钮
+            }, function(){
+                okFun();                
+                layer.closeAll('dialog');  //点击确定关闭提示框
+            });
+            
+}
+
+
+function onTimeSelect(id){
+  $("#"+id).focus();
+  $("#"+id).datetimepicker({
+            format:'yyyy-mm-dd hh:ii:ss',
+            autoclose: 1,
+            language:'en'});
+}
+
+
+function getErrorText(code){
+
+        if(code == -1){
+            return "Error position!";
+        }
+        else if(code == 0){
+            return "Operate successfully!";
+        }
+        else if(code == 1){
+            return "Error parameter!";
+        }
+        else if(code == 2){
+            return "Serial port address repeat!";
+        }
+        else if(code == 3){
+            return "Object not exists!";
+        }
+        else if(code == 4){
+            return "Port not exists!";
+        }
+        else if(code == 5){
+            return "Meter ID cannot be 0!";
+        }
+        else if(code == 6){
+            return "Device ID error!";
+        }
+        else if(code == 7){
+            return "Sensor ID error!"
+        }
+        else if(code == 8){
+            return "Port ID error!"
+        }
+        else if(code == 9){
+            return "Device or meter ID error!";
+        }
+        else if(code == 10){
+            return "Device not found!";
+        }
+        else if(code == 11){
+            return "Meter not found!";
+        }
+        else if(code == 12){
+            return "Operate success, take effect after restart!";
+        }
+        else if(code == 13){
+            return "SQL error!";
+        }
+        else if(code == 14){
+            return "Port not found!";
+        }
+        else if(code == 15){
+            return "Sensor not found!";
+        }
+        else if(code == 16){
+            return "File not found!";
+        }
+        else if(code == 17){
+            return "Both file and libary cannot be empty at the same time!";
+        }
+        else if(code == 18){
+            return "Both file and libary cannot be set at the same time!";
+        }
+        else if(code == 23){
+            return "Upgrading cannot be repeated!";
+        }
+        else if(code == 24){
+            return "Download file failed!";
+        }
+        else if(code == 25){
+            return "Upgrade file verified failed!";
+        }
+        else if(code == 26){
+            return "XML format error!";
+        }
+        else if(code == 28){
+            return "Port is occupied!";
+        }
+        else if(code == 29){
+            return "Module is not supported!";
+        }
+        else
+        {
+            return "Unknown error, code: "+code;
+        }
+}
+
+function msgShowFromResponse(response, closeFun){
+    if(response.result != undefined 
+        || response.error.code == 0){
+        msgTip("Operate successfully!",closeFun);
+    }
+    else
+    {
+        msgTip(getErrorText(response.error.code));
+    }
+}
+
+
+
+var lastTime = new Date().getTime();
+var currentTime = new Date().getTime();
+var timeOut = 15 * 60 * 1000; //设置超时时间
+ 
+$(function(){
+    /* 鼠标移动事件 */
+    $(document).mouseover(function(){
+        lastTime = new Date().getTime(); 
+ 
+    });
+});
+ 
+function toLoginPage(){
+    currentTime = new Date().getTime(); 
+    if(currentTime - lastTime > timeOut){ 
+		console.log("====time out for not operation, go to index.html ====");
+    	window.close();//关闭当前页
+        //window.parent.location.replace("index.html");
+		window.location.replace("index.html");
+    }
+}
+ 
+/* 定时器  
+ * 间隔1秒检测是否长时间未操作页面  
+ */
+window.setInterval(toLoginPage, 1000);
+

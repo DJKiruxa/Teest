@@ -1,0 +1,197 @@
+
+var mainMenu =
+[
+	{
+		text:"Data view",
+		href:"devView.html",
+		clickFun:null,
+		subMenus:[],
+	},
+	{
+		text:"Alarm",
+		href:"pages/alarm.html",
+		clickFun:null,
+		subMenus:[],
+	},
+	{
+		text:"Configuration",
+		href:"",
+		clickFun:null,
+        subMenus: [
+            {
+                text: "Graphics port",
+                href: "pages/GraphicalPortConfiguration.html",
+                clickFun: null,
+                subMenus: [],
+            },
+            {
+                text:"Meter configuration",
+                href:"pages/devConfig.html",
+                clickFun:null,
+                subMenus:[],
+            },
+            {
+                text: "Protocol edit",
+                href: "pages/scriptEdit.html",
+                clickFun: null,
+                subMenus: [],
+            },
+            {
+                text: "Protocol management",
+                href: "pages/scriptManager.html",
+                clickFun: null,
+                subMenus: [],
+            },
+			{
+                text:"Ext-module",
+                href:"pages/extendModuleConfig.html",
+                clickFun:null,
+                subMenus:[],
+            },
+            {
+                text:"Network",
+                href:"pages/networkconfig.html",
+                clickFun:null,
+                subMenus:[],
+            },
+			{
+				text:"Platform access",
+				href:"pages/platformConfig.html",
+				clickFun:null,
+				subMenus:[],
+			},
+            {
+                text:"Data synchronization",
+                href:"pages/dataSync.html",
+                clickFun:null,
+                subMenus:[],
+            },
+			{
+                text:"System parameters",
+                href:"pages/basicsetting.html",
+                clickFun:null,
+                subMenus:[],
+            },
+			{
+                text:"SNMP Mib Config",
+                href:"pages/snmpSetting.html",
+                clickFun:null,
+                subMenus:[],
+            }
+		],
+	},
+	{
+		text:"Device management",
+		href:"",
+		clickFun:null,
+		subMenus:[
+			{
+				text:"Maintenance",
+				href:"pages/devmaintain.html",
+				clickFun:null,
+				subMenus:[],
+			},
+			//{
+			//	text:"设备管理",
+			//	href:"pages/devManager.html",
+			//	clickFun:null,
+			//	subMenus:[],
+			//},
+            {
+                text:"System information",
+                href:"pages/sysstat.html",
+                clickFun:null,
+                subMenus:[],
+            },
+            {
+                text:"Operation log",
+                href:"pages/log.html",
+                clickFun:null,
+                subMenus:[],
+            },
+			{
+                text: "Template management",
+                href: "pages/templateManager.html",
+                clickFun: null,
+                subMenus: [],
+            },
+			{
+                text:"File synchronization",
+                href:"pages/fileSync.html",
+                clickFun:null,
+                subMenus:[],
+            },
+			{
+				text:"Device discovery",
+				href:"pages/devFind.html",
+				clickFun:null,
+				subMenus:[],
+			}
+		],
+	},
+	/*{
+		text:"其他",
+		href:"",
+		clickFun:null,
+		subMenus:[
+			{
+				text:"告警联动抓图",
+				href:"pages/alarmsnapshot.html",
+				clickFun:null,
+				subMenus:[],
+			},
+			{
+				text:"3D视图",
+				href:"pages/3dpage.html",
+				clickFun:null,
+				subMenus:[],
+			}
+		],
+	},*/
+];
+
+
+function genRealMenuHtml(menuData){
+	var html="";
+	html += "<li>";
+	html  += '<a href="#';
+	if(menuData.clickFun != null)
+	{
+		html += '" onclick="';
+		html += menuData.clickFun;
+	}
+	else
+	{
+		html += menuData.href;
+	}
+	html += '">';
+	html += menuData.text;
+	html += '</a></li>';
+	return html;	
+}
+
+jQuery(function(){
+	var userLevel=$.cookie("userLevel");
+	
+	for (var i = 0; i < mainMenu.length; i++) {
+		var html = "";
+		if(mainMenu[i].subMenus.length > 0){
+			html += '<li class="dropdown" data-stopPropagation="true">\
+          			<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">';
+          	html += mainMenu[i].text;
+          	html += '<span class="caret"></span></a><ul class="dropdown-menu">';
+          	for(var j =0; j < mainMenu[i].subMenus.length; j++){
+				if ((mainMenu[i].subMenus[j].text == "Protocol edit") && (userLevel>1)){
+					continue;
+				}
+          		html += genRealMenuHtml(mainMenu[i].subMenus[j]);
+          	}
+          	html += '</ul></li>';
+		}
+		else
+		{
+			html = genRealMenuHtml(mainMenu[i]);
+		}	
+		$("#mainNavUl").append(html);
+	}
+})

@@ -1,0 +1,804 @@
+
+/*
+ cacheService为SDK的缓存服务，缓存服务器设备列表、设备模板、量的值、量摘要等信息
+ */
+
+ 
+var DeviceCacheService = function(){
+    this.devs = new Map();
+    this.template =  null; //json format
+	this.templateMap =  new Map();
+    this.boardTemplate = null;
+    this.scriptname = null;
+    this.slotInfo = null;
+    this.sensors = null;
+    this.sensorPorts = null;
+    this.portResources = null;
+    this.proTemplate = new Array();
+	this.boardInfoList=[];
+    //this.fsuInfoList=[];// wlan
+	
+	//this.transparentMode = false;
+	this.platformMode = false;
+	this.remoteFsuId = null;
+	this.remoteFsuList=[];// for platform mode
+	this.remoteFsuInfo=new Map();
+	this.isPlatformMode = function (){
+		//console.log("======isPlatformMode:",this.platformMode);
+		return this.platformMode;
+	}
+	
+	
+	this.setTransparentMode = function(fsuId) {
+		$.cookie("transparentMode", fsuId);
+		console.log("transparent() fsuId:", fsuId);
+	}
+	
+	this.SetPlatformMode = function (){
+		console.log("======SetPlatformMode======");
+		this.platformMode = true;
+	}
+	
+	this.SetGatewayMode = function (){
+		console.log("======SetGatewayMode======");
+		this.platformMode = false;
+	}
+	
+	this.getBaseDevId = function(srcDevId)
+	{
+		return	srcDevId.substring(0, srcDevId.length-3) + "001"
+	}
+	
+    this.getTemplate = function (devId) {
+        if (this.templateMap == null) {
+            return null;
+        }
+		var dev = this.devs.get(devId);
+		if (dev != undefined)
+		{
+			var template = this.templateMap.get(this.getBaseDevId(dev.srcDevId));
+			if (template!=undefined)
+				return template;
+		}
+		return null;
+    }
+	
+	this.getDevNameByDevId =function(devId){
+		
+		var dev = this.devs.get(devId);
+		if (dev != undefined)
+		{
+			return dev.devName;
+		}
+		return null;
+	}
+	
+    this.getTemplateById = function (templateId) {
+        if (this.templateMap == null) {
+            return null;
+        }
+		
+		for(let item of this.templateMap.values())
+		{
+			if (templateId == item.Id) {
+				for(var i=0; i<item.children.length; i++)
+				{
+					var childrenId = item.children[i].Id;
+					childTemp = this.getTemplateById(childrenId);
+					if (childTemp!=null)
+					{
+						item.metes.push.apply(item.metes,childTemp.metes);
+					}
+				}
+				return item;
+			}
+		}
+		
+		return null;	
+    }
+	
+    this.getTemplateByTemplateName = function (templateName) {
+        if (this.templateMap == null) {
+            return null;
+        }
+		
+		for(let item of this.templateMap.values())
+		{
+			if (templateName == item.templateName) {
+				for(var i=0; i<item.children.length; i++)
+				{
+					var childrenId = item.children[i].Id;
+					childTemp = this.getTemplateById(childrenId);
+					if (childTemp!=null)
+					{
+						item.metes.push.apply(item.metes,childTemp.metes);
+					}
+				}
+				return item;
+			}
+		}
+		return null;
+    }
+	
+    this.getTemplateByBaseId = function (baseId) {
+        console.log("getTemplateByBaseId baseId"+baseId);
+        if (this.templateMap == null) {
+            return null;
+        }
+		var template = this.templateMap.get(this.getBaseDevId(baseId));
+		if (template!=undefined)
+		{
+			for(var i=0; i<template.children.length; i++)
+			{
+				var childrenId = template.children[i].Id;
+				childTemp = this.getTemplateById(childrenId);
+				if (childTemp!=null)
+				{
+					template.metes.push.apply(template.metes,childTemp.metes);
+				}
+			}
+			return template;
+		}
+		return null;
+    }
+
+    this.random = function(lower, upper) {
+        return Math.floor(Math.random() * (upper - lower)) + lower;
+    }
+
+	this.createBaseId = function (devType){
+		var errcnt = 0;
+        while(1)
+        {
+            var baseId = this.random(1000, 5000);
+			
+			if (this.templateMap.get(baseId) == undefined)
+			{
+				return baseId;
+			}
+            
+			errcnt++;
+			if (errcnt > 3999)
+			{
+				return "";
+			}
+        }
+	}
+	
+    this.IsCanConfig = function (devId, meteId) {
+        if (this.templateMap == null) {
+            return false;
+        }
+		
+		var dev = this.devs.get(devId);
+		if (dev!=undefined)
+		{
+			var template = this.templateMap.get(this.getBaseDevId(dev.srcDevId));
+			for (var i=0; i<template.metes.length; i++)
+			{
+				if (meteId == template.metes[i].channel)
+				{
+					if (template.metes[i].type != "alarm")
+					{
+						return true;
+					}
+					break;
+				}
+			}
+		}
+		return false;
+    }
+
+    this.getMeteTemplate=function(meteId, devTemplate){
+         for(var k =0; k < devTemplate["metes"].length; k++)
+          {
+              if(devTemplate["metes"][k]["channel"] == meteId){
+                  return devTemplate["metes"][k];
+              }                          
+          }
+          return null;
+    }
+
+    this.getSerialPortList=function(){
+        var portArry = new Array();
+        if (this.portResources!=null) {
+            for (var i = 0; i < this.portResources.length; i++) {
+                if (this.portResources[i].name.indexOf("Uart")!=-1) {
+                    var item = {
+                            'innerId':i,
+                        'portId': this.portResources[i].name,
+						'silkName': this.portResources[i].silkName,
+                          };
+                          portArry.push(item);
+                }
+            }
+        }
+     
+        return portArry;
+    }
+
+    this.getConfigPort=function(objId, meteId){
+        var portType = 255;
+        var portArry = new Array(); 
+      
+        return portArry;
+    }
+
+    this.getSensorPortByMeteId=function(objId, meteId){
+        
+        return null;
+    }
+
+    this.getSensorPortBySensorId=function(sensorId){
+        
+        return null;
+    }
+
+    this.getSensorBySensorId=function(sensorId){
+       
+        return null;
+    }
+
+    this.getTemplateSensor = function (typeId) {
+        if (this.template == null) {
+            return null;
+        }
+      return null;
+    }
+
+    this.getTemplateSensorBySensorType = function (sensroType) {
+        if (this.template == null) {
+            return null;
+        }
+      return null;
+    }
+
+    this.getSerialFile=function(templateId){      
+        var fileArry = new Array();
+        for(var i =0; i < this.proTemplate.length; i++){
+          if(templateId == this.proTemplate[i].catalog){
+               for(var j =0; j < this.proTemplate[i].children.length; j++)
+               {
+                  fileArry.push(this.proTemplate[i].children[j].protolName);
+               }           
+               break;    
+          }
+        }
+        return fileArry;
+    }
+
+    this.refresSensorCfg=function(){
+     
+    }
+
+    this.getTemplateMetes=function(templatId){  
+        function addMeteToSelect(template, meteArry){
+            if (template == null){
+                return;
+            }
+            for(var i =0; i < template.metes.length; i++){
+				var meter = template.metes[i];
+				meter.id = template.metes[i].channel;
+                meteArry.push(meter);        
+            }
+            if(template.children!=null&&template.children!=undefined&&template.children.length>0){
+                    for(var i =0 ; i <template.children.length; i++){
+                addMeteToSelect(deviceCacheService.getTemplateById(template.children[i].Id),meteArry);
+                }
+            }
+
+        }
+        var meteArry = [];
+        addMeteToSelect(deviceCacheService.getTemplateById(templatId), meteArry);
+        return meteArry;
+    }
+
+    this.refreshTemplate = function () {
+		console.log("refreshTemplate");
+        var random = Math.random();
+        httpGetSyn("/jscmd/getTemplateJson" + "?" + random,
+            function success(response, status, userdata) {
+				userdata.template = response.result;
+				userdata.templateMap.clear();
+				for (var i=0; i<response.result.templates.length; i++)
+				{
+					var template = response.result.templates[i];
+					userdata.templateMap.set(template.devBaseId,template);
+				}
+            },
+            function () {
+
+            }, this);
+    }
+	
+	
+    this.refreshScriptname = function () {
+        var random = Math.random();
+        httpGetSyn("/jscmd/smartProtocoFilelName" + "?" + random,
+            function success(response, status, userdata) {
+                userdata.scriptname = response.result.nameList;
+            }, function () { }, this);
+    }
+	
+	this.updateDevInfo = function ()
+	{
+		console.log("updateDevInfo");
+		var devCache = this;
+        for (let item of this.devs.values())
+		{
+			var metersObj = $.extend({}, devCache.getTemplateMetes(item.templateName));
+			var meteArray = Object.values(metersObj)
+            for (var i = 0; i < item.children.length; i++) {
+                var childMeteArray = devCache.getTemplateMetes(item.children[i].templateName);
+                childMeteArray.forEach(function (mete, index) {
+					for(var j =0; j < item.children[i].count; j++)
+                    {
+						/*if (j == 0)
+                        {
+							for (var m=0; m<meteArray.length; m++)
+							{
+								if (meteArray[m].id == mete.id)
+								{
+									var pos = meteArray[m].name.indexOf("#");
+									if (pos == -1){
+										meteArray[m].name = meteArray[m].name+"#001";
+									}
+									else{
+										meteArray[m].name = meteArray[m].name.substr(0,pos) + "#001";
+									}
+									break;
+								}
+							}
+						}
+						else*/
+                        {
+							var idx = (1000 + (j+1) + "").substring(1);
+							var tmpMete = $.extend({}, mete);
+							tmpMete.id = tmpMete.id.substring(0, tmpMete.id.length-3) + idx; //parseInt(tmpMete.id)+j;
+							tmpMete.channel = tmpMete.id;
+							var pos = tmpMete.name.indexOf("#");
+							if (pos == -1){
+								tmpMete.name = tmpMete.name+"#"+idx;
+							}
+							else{
+								tmpMete.name = tmpMete.name.substr(0,pos) + "#" + idx;
+							}
+							meteArray.push(tmpMete);
+						}
+                    }
+                })
+            }
+			item.meteArray = meteArray;
+        }
+		
+	}
+	
+	this.RemoveFsuInfo = function(fsuMac)
+	{
+		fsuMac = fsuMac.toLowerCase();
+		if (this.remoteFsuInfo.get(fsuMac) != undefined)
+		{
+			this.remoteFsuInfo.delete(fsuMac);
+		}
+	}
+	
+	this.isRemoteFsuExist = function(fsuMac)
+	{
+		fsuMac = fsuMac.toLowerCase();
+		if (this.remoteFsuInfo.get(fsuMac) == undefined)
+		{
+			return false;
+		}	
+		
+		return true;
+	}
+	
+	this.getRemoteFsuState = function () {
+        var random = Math.random();
+        httpGetSyn("/jscmd/getRemoteFsuState" + "?" + random,
+            function (response, status, userdata) {
+                var fsuState = response.result.fsuList;
+				console.log("getRemoteFsuState()");
+				if (fsuState == undefined)
+					return;
+				for (var i=0; i<fsuState.length; i++)
+				{
+					var mac = fsuState[i].n.toLowerCase();
+					var fsu = {province:"",
+								city:"",
+								county:"",
+								fsuName:"",
+								mac:mac,
+								group:"admin",
+								state:fsuState[i].s,
+								};
+					
+					if (userdata.remoteFsuInfo.get(mac) == undefined)
+					{
+						userdata.remoteFsuInfo.set(mac,fsu);
+					}						
+					else
+					{
+						userdata.remoteFsuInfo.get(mac).mac = mac;
+						userdata.remoteFsuInfo.get(mac).state = fsuState[i].s;
+					}
+				}
+            }, function () { }, this);
+    }
+	
+	
+	this.updateFsuState = function() {
+		this.getRemoteFsuState();
+		var remoteFsuList = this.remoteFsuList;
+		for (var i=0; i<remoteFsuList.length; i++)
+		{
+			remoteFsuList[i].iconOpen = "/zTree_v3/css/zTreeStyle/img/diy/1_open.png";
+			remoteFsuList[i].iconClose = "/zTree_v3/css/zTreeStyle/img/diy/1_close.png";
+			for (var j=0; j<remoteFsuList[i].children.length;j++)
+			{
+				remoteFsuList[i].children[j].iconOpen = "/zTree_v3/css/zTreeStyle/img/diy/8.png";
+				remoteFsuList[i].children[j].iconClose = "/zTree_v3/css/zTreeStyle/img/diy/8.png";
+				for (var k=0; k<remoteFsuList[i].children[j].children.length; k++)
+				{
+					remoteFsuList[i].children[j].children[k].iconOpen = "/zTree_v3/css/zTreeStyle/img/diy/cloud.png";
+					remoteFsuList[i].children[j].children[k].iconClose = "/zTree_v3/css/zTreeStyle/img/diy/cloud.png";
+					for (var l=0; l<remoteFsuList[i].children[j].children[k].children.length; l++)
+					{
+						var name = remoteFsuList[i].children[j].children[k].children[l].children[0].name;
+						name = name.toLowerCase();
+
+						if ((this.remoteFsuInfo.get(name) != undefined) && (this.remoteFsuInfo.get(name).state == "y"))
+						{
+							remoteFsuList[i].children[j].children[k].children[l].iconOpen = "/zTree_v3/css/zTreeStyle/img/diy/link.png";
+							remoteFsuList[i].children[j].children[k].children[l].iconClose = "/zTree_v3/css/zTreeStyle/img/diy/link.png";
+						}
+						else{
+							remoteFsuList[i].children[j].children[k].children[l].iconOpen = "/zTree_v3/css/zTreeStyle/img/diy/cut.png";
+							remoteFsuList[i].children[j].children[k].children[l].iconClose = "/zTree_v3/css/zTreeStyle/img/diy/cut.png";
+						}
+						//province.children[j].children[k].children[l].children = [];
+					}
+				}
+			}
+		}
+		this.remoteFsuList = remoteFsuList;
+	}
+	
+	this.getFsuList = function(){
+		var random = Math.random();
+		var province="";
+		var city="";
+		var county="";
+		var fsuName="";
+		var mac="";
+		var group="";
+		httpGetSyn("/jscmd/getRemoteFsuList" + "?" + random,
+			function success(response, status, userdata) {
+				var remoteFsuList = response.result.fsuList;
+				if (remoteFsuList == undefined) return;
+				
+				for (var i=0; i<remoteFsuList.length; i++)
+				{
+					province = remoteFsuList[i].name;
+					remoteFsuList[i].iconOpen = "/zTree_v3/css/zTreeStyle/img/diy/1_open.png";
+					remoteFsuList[i].iconClose = "/zTree_v3/css/zTreeStyle/img/diy/1_close.png";
+					for (var j=0; j<remoteFsuList[i].children.length;j++)
+					{
+						city = remoteFsuList[i].children[j].name;
+						remoteFsuList[i].children[j].iconOpen = "/zTree_v3/css/zTreeStyle/img/diy/8.png";
+						remoteFsuList[i].children[j].iconClose = "/zTree_v3/css/zTreeStyle/img/diy/8.png";
+						for (var k=0; k<remoteFsuList[i].children[j].children.length; k++)
+						{
+							county = remoteFsuList[i].children[j].children[k].name;
+							remoteFsuList[i].children[j].children[k].iconOpen = "/zTree_v3/css/zTreeStyle/img/diy/cloud.png";
+							remoteFsuList[i].children[j].children[k].iconClose = "/zTree_v3/css/zTreeStyle/img/diy/cloud.png";
+							for (var l=0; l<remoteFsuList[i].children[j].children[k].children.length; l++)
+							{
+								fsuName = remoteFsuList[i].children[j].children[k].children[l].name;
+								mac = remoteFsuList[i].children[j].children[k].children[l].children[0].name;
+								group = remoteFsuList[i].children[j].children[k].children[l].children[0].group;
+								mac = mac.toLowerCase();
+								
+						
+								if (userdata.remoteFsuInfo.get(mac) == undefined)
+								{
+									var fsu = {province:province,
+												city:city,
+												county:county,
+												fsuName:fsuName,
+												mac:mac,
+												group:group,
+												state:"n",
+												};
+									userdata.remoteFsuInfo.set(mac,fsu);
+								}
+								else
+								{
+									userdata.remoteFsuInfo.get(mac).province = province;
+									userdata.remoteFsuInfo.get(mac).city = city;
+									userdata.remoteFsuInfo.get(mac).county = county;
+									userdata.remoteFsuInfo.get(mac).fsuName = fsuName;
+									userdata.remoteFsuInfo.get(mac).mac = mac;
+									userdata.remoteFsuInfo.get(mac).group = group;
+								}
+								
+								if (userdata.remoteFsuInfo.get(mac).state == "y")
+								{
+									remoteFsuList[i].children[j].children[k].children[l].iconOpen = "/zTree_v3/css/zTreeStyle/img/diy/link.png";
+									remoteFsuList[i].children[j].children[k].children[l].iconClose = "/zTree_v3/css/zTreeStyle/img/diy/link.png";
+								}
+								else{
+									remoteFsuList[i].children[j].children[k].children[l].iconOpen = "/zTree_v3/css/zTreeStyle/img/diy/cut.png";
+									remoteFsuList[i].children[j].children[k].children[l].iconClose = "/zTree_v3/css/zTreeStyle/img/diy/cut.png";
+								}
+								
+								//province.children[j].children[k].children[l].children = [];
+							}
+						}
+					}
+				}
+				userdata.remoteFsuList = remoteFsuList;
+			}, function () { }, this);
+		
+		
+	}
+	
+	this.IsPlatformSvrFromJscmd = function () {
+		var random = Math.random();
+		httpGetSyn("/jscmd/boardInfo?" + random, 
+			function success(responsed, status, userdata) {
+				var result = responsed.result;
+				if (result == undefined || result == null) {
+					return;
+				}
+				var boardInfo = result.boardInfo;
+				if (boardInfo.length==0)
+					return true;
+				for (var i=0; i<boardInfo.length; i++)
+				{
+					if (boardInfo[i].boardType == "x86")
+						return true;
+				}
+			}, function(){},this);
+		
+		return false;
+	}
+
+	
+	
+    this.init = function () {
+		console.log("init");
+		var random = Math.random();
+		var transFsuId = isTranspatrenMode();
+		
+		this.refreshTemplate();
+		
+        httpGetSyn("/jscmd/smartProtocoFilelName" + "?" + random,
+            function success(response, status, userdata) {
+                userdata.scriptname = response.result.nameList;
+            }, function () { }, this);
+        httpGetSyn("/jscmd/portResources" + "?" + random,
+            function success(response, status, userdata) {
+                userdata.portResources = response.result.portResources;
+            }, function () { }, this);
+       
+		this.refreshDevs();
+		  
+		httpGetSyn("/jscmd/boardInfo?" + random, 
+			function success(responsed, status, userdata) {
+				result = responsed.result;
+				if (result == undefined || result == null) {
+					return;
+				}
+				boardInfoList = result.boardInfo;
+			}, function(){},this);
+		
+		if (this.IsPlatformSvrFromJscmd())//(this.isPlatformMode())
+		{
+			if ((transFsuId == undefined) || (transFsuId == "false"))
+			{
+				this.getRemoteFsuState();
+				this.getFsuList();
+			}
+		}
+    }
+	
+	
+	
+    this.refreshDevs = function (fsuId) {
+        var random = Math.random();
+		var url = "/jscmd/getDevList?";
+		if ((fsuId!=null) && (fsuId!=undefined))
+		{
+			url += "fsuId=" + fsuId;
+		}
+		else
+		{
+			url += random;
+		}
+        httpGetSyn(url,
+            function (response, status, userdata) {
+				userdata.devs.clear();
+				for (var i=0; i<response.result.devList.length; i++)
+				{
+					var dev = response.result.devList[i];
+					userdata.devs.set(dev.devId,dev);
+				}
+				userdata.updateDevInfo();
+            }, function () { }, this);
+    }
+	
+	this.getBottomBoardName = function(){
+		for (var i=0; i<boardInfoList.length; i++)
+		{
+			if (boardInfoList[i].boardName == "BottomBoard")
+			{
+				return boardInfoList[i].boardType;
+			}
+		}
+		return "";
+	}
+	
+	this.getExtendBoardName = function(){
+		var extBoardNameList=[];
+		for (var i=0; i<boardInfoList.length; i++)
+		{
+			if (boardInfoList[i].boardName.indexOf("ExtBoard") != -1)
+			{
+				extBoardNameList.push(boardInfoList[i]);
+			}
+		}
+		return extBoardNameList;
+	}
+	
+	
+    this.getObj=function(devId){
+		var dev = this.devs.get(devId);
+		if (dev != undefined)
+		{
+			return dev;
+		}
+		return null;
+    }
+
+    this.getMeteName=function(templateId, meteId){
+          var meteName = '';
+            if(meteId == '0')
+            {
+                meteName = "Disconnected";
+            }
+            else
+            {
+                if(templateId == "")
+                {
+                  return '';
+                }
+                var devTemplate =this.getTemplateById(templateId);
+				if(devTemplate!=null)
+				{
+					for(var j =0; j < devTemplate.metes.length; j++)
+					{
+						orgMeterId = meteId.substr(0, meteId.length-3) + "001";
+						if(devTemplate.metes[j].channel == orgMeterId)
+						{
+							meteName = devTemplate.metes[j].name;
+							break;
+						}
+					} 
+				}
+
+            }
+            return meteName;
+    }
+
+
+    this.getMeteType=function(templateId, meteId){
+        var meteType = '';
+        var hasFind = 0;
+        if(meteId == '0')
+        {
+            meteType = "null";
+        }
+        else
+        {
+            if(templateId == "")
+            {
+                return '';
+            }
+            var meteArray = this.getTemplateMetes(templateId);
+            if (meteArray != null) {
+                for (var j = 0; j < meteArray.length; j++) {
+                    if (meteArray[j].id == meteId) {
+                        meteType = meteArray[j].type;
+                        break;
+                    }
+
+                }
+            }
+
+            /*var devTemplate =this.getTemplateById(templateId);
+			if(devTemplate!=null)
+			{
+				for(var j =0; j < devTemplate.metes.length; j++)
+				{
+					if(devTemplate.metes[j].channel == meteId)
+					{
+                        meteType = devTemplate.metes[j].type;
+                        hasFind = 1;
+						break;
+					}
+                }
+                if (hasFind == 0 && devTemplate.children != null && devTemplate.children) {
+
+                }
+			}*/
+
+        }
+        return meteType;
+    }
+
+
+
+  this.getHardPordCount=function(){
+    var _this = this;
+    var portArry=[];
+      this.slotInfo.forEach(function(item, index){
+            for(var j =0; j < _this.boardTemplate.length; j++){
+              if(item.boardTypeId == _this.boardTemplate[j].boardTypeId){
+                  for(var k =0; k < _this.boardTemplate[j].info.length; k++){
+                        for(var l = 0; l < _this.boardTemplate[j].info[k].port_count; l++){
+                             var item = {                                
+                                'portId':_this.boardTemplate[j].info[k].port_usage,
+                             };
+                             console.log("asdasdas");
+                             portArry.push(item);
+                        }
+                  }                
+                break;
+              }
+            }
+    });
+    return portArry;
+}
+
+this.addProtocol=function(item){
+  var bFound =false;
+  for(var i =0; i < this.proTemplate.length; i++){
+    if(item.catalog == this.proTemplate[i].catalog){
+        bFound = true;
+        this.proTemplate[i].children.push(item);
+    }
+  }
+  if(bFound == false){
+    var child = {
+      catalog:item.catalog,
+      children:new Array(),
+    };
+    child.children.push(item);
+    this.proTemplate.push(child);
+  }
+}
+
+this.getProBody=function(templatId, proName){
+  for(var i =0; i < this.proTemplate.length; i++){
+       if(templatId == this.proTemplate[i].catalog){
+            for(var j = 0 ; j < this.proTemplate[i].children.length; j++){
+              if(proName == this.proTemplate[i].children[j].protolName){
+                  return this.proTemplate[i].children[j].body;
+              }
+            }
+       }
+  }
+  return
+}
+
+this.getObjMetes=function(devId){
+	var dev = this.devs.get(devId);
+	if (dev != undefined)
+	{
+		return dev.meteArray;
+	}
+	return null;
+}
+}
+var deviceCacheService = new DeviceCacheService();

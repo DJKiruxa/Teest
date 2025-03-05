@@ -1,0 +1,55 @@
+/*
+ serverInfoService为服务器信息缓存接口，可以通过此接口设置和获取当前登录的服务器信息
+ */
+var serverInfo=function() {
+	//console.log("class serverInfo");
+    this.serverIp ="";
+    this.serverPort="";
+    this.username="admin";
+    this.password="admin";
+    this.userId = "0";
+    this.setServerAddr=function(ip, port){//设置服务器信息
+          this.serverIp = ip;
+          this.serverPort = port;
+        };
+    this.getServerIp=function(){//获取服务器Ip
+          return window.location.hostname;
+        };
+    this.getServerPort=function(){//获取服务器端口
+          return window.location.port;
+    }
+    this.getServerURL = function () {
+        return document.location.protocol + "//" + serverInfoService.getServerIp() + ":" + serverInfoService.getServerPort();
+    }
+	this.getUserName=function(){
+		var params=$.cookie("msjParams");
+		if ((params=="") || (params==undefined))
+		{
+			return;
+		}
+		var params = CryptoJS.DES.decrypt(params, CryptoJS.enc.Utf8.parse("comeback"), {
+		  mode: CryptoJS.mode.ECB,
+		  padding: CryptoJS.pad.Pkcs7
+		}).toString(CryptoJS.enc.Utf8);
+		
+		//params = base64decode(params);
+		var namePos = params.indexOf("name=");
+		if (namePos != -1)
+		{
+			namePos += 5;
+			var pwdPos = params.indexOf("&pwd=");
+			if (pwdPos != -1)
+			{
+				var name = params.substring(namePos, pwdPos);
+				this.username = name;
+				pwdPos += 5;
+				var pwd = params.substr(pwdPos);
+				this.password = pwd;
+			}
+		}
+	}
+	
+}
+
+var serverInfoService = new serverInfo();
+serverInfoService.getUserName();
